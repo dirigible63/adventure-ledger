@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn() { return request.auth != null; }
+  function me() { return get(/databases/$(database)/documents/members/$(request.auth.uid)); }
+  function member() { return signedIn() && exists(/databases/$(database)/documents/members/$(request.auth.uid)); }
+  function dm() { return member() && me().data.role == 'dm'; }
+  function allowedEmail() { return signedIn() && request.auth.token.email_verified == true && exists(/databases/$(database)/documents/invites/$(request.auth.token.email)); }
+  match /bootstrap/{id} {
+   allow read: if signedIn();
+   allow create: if id == 'owner' && signedIn() && !exists(/databases/$(database)/documents/bootstrap/owner) && request.resource.data.uid == request.auth.uid && request.resource.data.keys().hasOnly(['uid']);
+  }
+  match /members/{uid} {
+   allow read: if member();
+   allow create: if signedIn() && uid == request.auth.uid && request.resource.data.keys().hasOnly(['email','role','joinedAt']) && request.resource.data.email == request.auth.token.email && ((request.resource.data.role == 'dm' && get(/databases/$(database)/documents/bootstrap/owner).data.uid == uid) || (request.resource.data.role == 'player' && allowedEmail()));
+   allow update, delete: if false;
+  }
+  match /invites/{email} {
+   allow read: if dm() || (signedIn() && request.auth.token.email == email);
+   allow create, update, delete: if dm() && request.resource.data.keys().hasOnly(['createdAt']);
+  }
+  match /characters/{uid} {
+   allow read: if member();
+   allow create, update: if member() && (uid == request.auth.uid || dm()) && request.resource.data.keys().hasOnly(['name','ancestry','className','level','xp','ac','speed','hp','maxHp','tempHp','gold','silver','copper','abilities','inventory','notes','resources','updatedAt','ownerEmail']) && request.resource.data.ownerEmail == get(/databases/$(database)/documents/members/$(uid)).data.email;
+   allow delete: if dm();
+  }
+  match /logs/{id} {
+   allow read: if member();
+   allow create: if member() && request.resource.data.keys().hasOnly(['uid','actor','kind','amount','note','at']) && (request.resource.data.uid == request.auth.uid || dm()) && request.resource.data.actor == request.auth.uid;
+   allow update, delete: if false;
+  }
+ }
+}
