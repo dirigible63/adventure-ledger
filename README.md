@@ -1,29 +1,21 @@
-# Adventure Ledger 2.4
+# Adventure Ledger 2.5 — DM item preparation
 
-Based on the **fixed** 2.3 release.
+## New
+- DM can save a custom item to the campaign catalogue **without awarding it**.
+- DM can alternatively create and award immediately, as before.
+- Prepared catalogue items can later be awarded through the existing equipment catalogue.
+- Optional DM-only secret notes are saved separately for prepared items.
+- Campaign custom catalogue is DM-only to prevent players seeing unrevealed story items. Standard starter equipment remains available to players.
+- Existing campaign inventory and encounters are unchanged.
 
-## Features
-- DM-only encounter tracker: create named encounters, mix monster types, add multiple combatants with separate HP/AC, apply damage or healing, reset HP, remove combatants, delete encounters.
-- Encounter state is stored in Firestore under `campaigns/{campaignId}/encounters` and updates live across DM sessions.
-- Transfer or drop inventory items. Players may transfer their own **whole** item stacks to another character, party supplies, or dropped items. The DM may also split stacks. Dropped items remain in a recoverable shared list. Unidentified stacks cannot be split.
-- Preserves the v2.3 character dropdowns and calculations.
-
-## Installation — important
-1. Back up your GitHub repository and save a copy of your **existing Firestore rules**.
-2. Upload **app.js**, **index.html**, **styles.css** to the GitHub Pages repository root. Keep your existing firebase-config.js.
-3. **Update Firestore rules** in Firebase Console with the supplied `firestore.rules`. This release **requires** the new encounter permission and inventory transfer rule. The rules also include the v2.3 character-field permissions.
-4. Wait for GitHub Pages to deploy and hard refresh (Ctrl+Shift+R).
+## Install
+Replace `app.js` and `index.html` in GitHub Pages with these files. Publish the included `firestore.rules` in Firebase Console (the itemCatalog read rule changes from campaign members to DM only). Keep `firebase-config.js` unchanged.
 
 ## Test
-1. Sign in as DM, open a campaign, select **Encounters**. Create Forest Ambush; add 3 goblins (15 HP) and 2 wolves (11 HP). Damage Goblin 1, refresh, confirm HP persists.
-2. Award an item to a player; sign in as player, transfer the whole stack to Party supplies, verify it appears there.
-3. As DM, split a stack and drop part of it; inspect Dropped items and transfer it back.
-4. Verify the character sheet still saves species, class, background, alignment, and skill proficiencies.
+1. Sign in as DM and open a campaign, Inventory > Create custom item.
+2. Choose Save to catalogue, enter a name, and save. It should appear in the equipment catalogue, but not anyone's inventory.
+3. Later, select a recipient in Award equipment and click Add on the prepared item.
+4. Confirm the item appears in the intended character's inventory.
+5. Sign in as a player and confirm the unpublished item isn't visible in their catalogue.
 
-## Limitations
-- Monster names, AC and HP are manually entered; there is no licensed monster catalogue or initiative tracker yet.
-- Only the DM can manage encounters. Monster HP is private to the DM.
-- Players can transfer whole stacks; DM can split stacks. There is no separate player-to-player acceptance workflow.
-- Encounter data is separate from map locations; Adventure Atlas integration is later.
-- Item transfers do not transfer DM-only secret documents when splitting; splitting unidentified items is disabled.
-- Rules and syntax were checked locally, but Firebase live integration has not been tested.
+JavaScript syntax checked; live Firebase integration not tested.
