@@ -1,30 +1,29 @@
-# Adventure Ledger 2.2 — Usability update
+# Adventure Ledger 2.3 — Character sheet enhancements
 
-Responsive interface update based on the existing v2.1 app and Firestore data model.
+Based on Adventure Ledger 2.2. Keeps the same Firebase project and existing character documents.
 
-## What's changed
-- DM dashboard shows one card per player, with HP, AC, item count, and direct **Inventory**, **Award**, and **Character** actions.
-- Inventory tab has visible player/party selectors for DMs; awards launched from a player card preselect that recipient.
-- Players see **My inventory** first, with shared party supplies collapsible underneath.
-- Character view starts with HP, AC, gold, and an inventory shortcut; full editing form is expandable.
-- Common touch targets enlarged; phone navigation scrolls horizontally and stays visible.
-- Custom item creation is collapsible to reduce screen clutter.
-- Asset cache-busting query strings (`?v=2.2`) help avoid stale JavaScript after deployment.
+## New
+- Dropdowns for 2024 Player's Handbook species (10), classes (12), backgrounds (16), and alignments (9 plus Unaligned).
+- **Custom / Other** for all four dropdowns, including preservation of older nonstandard character values.
+- Proficiency bonus calculated from level (1–20).
+- Six ability modifiers calculated from ability scores.
+- Eighteen skill proficiency checkboxes, with live skill bonus previews.
+- Saved `background`, `alignment`, and `skillProficiencies` fields in each character document.
 
-## Installation
-1. Back up your current repository (Code > Download ZIP).
-2. Upload **index.html**, **app.js**, and **styles.css** to the root of your GitHub repository, replacing the existing versions. Keep **firebase-config.js** unchanged if you've customized it.
-3. Commit to `main`, wait for GitHub Pages deployment, and refresh the site.
-
-**No Firestore rules or database migration required.** The included `firestore.rules` is a copy of the existing v2.1 rules for reference, not an instruction to republish them.
+## Deploy
+1. Back up your GitHub repository.
+2. Replace `index.html`, `app.js`, and `styles.css` in the repo root with these files.
+3. Leave your existing `firebase-config.js` and Firestore rules unchanged.
+4. Commit, wait for GitHub Pages, then hard-refresh.
 
 ## Test
-1. Sign in as DM and open a campaign; choose Inventory on a character card, then Award on that same card.
-2. Award a starter item; check the recipient's inventory and verify the item appears for that player.
-3. Test on a phone-sized screen and on a tablet/laptop.
+- Open a character, choose species/class/background/alignment, and save.
+- Try Custom / Other; save, reopen, verify custom text persists.
+- Change STR from 10 to 16: modifier should change from +0 to +3.
+- At level 5 proficiency bonus should show +3. Checking Athletics with STR 16 should show +6.
+- Verify previous inventory and DM award actions still work.
 
-## Known limitations
-- This is a responsive UI redesign, not a new equipment or rules engine.
-- Character form is still reconstructed on Firestore snapshot updates, so save detailed edits before switching tabs.
-- The app still requires internet access; offline/PWA support is not included.
-- This package has been statically checked, but has not been tested against your live Firebase project.
+## Scope
+This is a calculated **reference sheet**, not a full rules engine. Saving a character does not automatically change AC, HP, spellcasting, class proficiencies, or saving throws. No dice roller, subclasses, multiclassing, expertise, or class-derived skill selections yet.
+
+Static JS syntax validated. Live Firebase integration not tested.
