@@ -2,32 +2,57 @@ rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
   function signedIn() { return request.auth != null; }
-  function me() { return get(/databases/$(database)/documents/members/$(request.auth.uid)); }
   function member() { return signedIn() && exists(/databases/$(database)/documents/members/$(request.auth.uid)); }
-  function dm() { return member() && me().data.role == 'dm'; }
-  function allowedEmail() { return signedIn() && request.auth.token.email_verified == true && exists(/databases/$(database)/documents/invites/$(request.auth.token.email)); }
+  function me() { return get(/databases/$(database)/documents/members/$(request.auth.uid)); }
+  function legacyDm() { return member() && me().data.role == 'dm'; }
+  function verified() { return signedIn() && request.auth.token.email_verified == true; }
+  function allowedEmail() { return verified() && exists(/databases/$(database)/documents/invites/$(request.auth.token.email)); }
   match /bootstrap/{id} {
    allow read: if signedIn();
-   allow create: if id == 'owner' && signedIn() && !exists(/databases/$(database)/documents/bootstrap/owner) && request.resource.data.uid == request.auth.uid && request.resource.data.keys().hasOnly(['uid']);
+   allow create: if id == 'owner' && verified() && !exists(/databases/$(database)/documents/bootstrap/owner) && request.resource.data.uid == request.auth.uid && request.resource.data.keys().hasOnly(['uid']);
   }
   match /members/{uid} {
-   allow read: if member();
-   allow create: if signedIn() && uid == request.auth.uid && request.resource.data.keys().hasOnly(['email','role','joinedAt']) && request.resource.data.email == request.auth.token.email && ((request.resource.data.role == 'dm' && get(/databases/$(database)/documents/bootstrap/owner).data.uid == uid) || (request.resource.data.role == 'player' && allowedEmail()));
+   allow get: if signedIn() && (uid == request.auth.uid || member());
+   allow list: if member();
+   allow create: if verified() && uid == request.auth.uid && request.resource.data.keys().hasOnly(['email','role','joinedAt']) && request.resource.data.email == request.auth.token.email && ((request.resource.data.role == 'dm' && get(/databases/$(database)/documents/bootstrap/owner).data.uid == uid) || (request.resource.data.role == 'player' && allowedEmail()));
    allow update, delete: if false;
   }
   match /invites/{email} {
-   allow read: if dm() || (signedIn() && request.auth.token.email == email);
-   allow create, update, delete: if dm() && request.resource.data.keys().hasOnly(['createdAt']);
+   allow get: if legacyDm() || (signedIn() && request.auth.token.email == email);
+   allow list: if legacyDm();
+   allow create, update: if member() && request.resource.data.keys().hasOnly(['createdAt','campaignId']) && (legacyDm() || (request.resource.data.campaignId is string && exists(/databases/$(database)/documents/campaigns/$(request.resource.data.campaignId)) && get(/databases/$(database)/documents/campaigns/$(request.resource.data.campaignId)).data.ownerUid == request.auth.uid));
+   allow delete: if legacyDm();
   }
-  match /characters/{uid} {
-   allow read: if member();
-   allow create, update: if member() && (uid == request.auth.uid || dm()) && request.resource.data.keys().hasOnly(['name','ancestry','className','level','xp','ac','speed','hp','maxHp','tempHp','gold','silver','copper','abilities','inventory','notes','resources','updatedAt','ownerEmail']) && request.resource.data.ownerEmail == get(/databases/$(database)/documents/members/$(uid)).data.email;
-   allow delete: if dm();
-  }
-  match /logs/{id} {
-   allow read: if member();
-   allow create: if member() && request.resource.data.keys().hasOnly(['uid','actor','kind','amount','note','at']) && (request.resource.data.uid == request.auth.uid || dm()) && request.resource.data.actor == request.auth.uid;
-   allow update, delete: if false;
+  // Legacy records remain readable but are not modified by the new application.
+  match /characters/{uid} { allow read: if member(); allow write: if false; }
+  match /logs/{id} { allow read: if member(); allow write: if false; }
+  function c(cid) { return get(/databases/$(database)/documents/campaigns/$(cid)); }
+  function inCampaign(cid) { return member() && c(cid).data.roster[request.auth.uid] == true; }
+  function campaignDm(cid) { return inCampaign(cid) && c(cid).data.dmUid == request.auth.uid; }
+  function campaignOwner(cid) { return inCampaign(cid) && c(cid).data.ownerUid == request.auth.uid; }
+  match /campaigns/{cid} {
+   allow get, list: if member() && resource.data.roster[request.auth.uid] == true;
+   allow create: if member() && request.resource.data.keys().hasOnly(['name','ownerUid','dmUid','roster','status','session','createdAt','updatedAt']) && request.resource.data.ownerUid == request.auth.uid && request.resource.data.dmUid == request.auth.uid && request.resource.data.roster.keys().hasOnly([request.auth.uid]) && request.resource.data.roster[request.auth.uid] == true && request.resource.data.status == 'active';
+   allow update: if member() && (
+     (resource.data.ownerUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','dmUid','roster','status','session','updatedAt']) && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.roster[resource.data.ownerUid] == true && request.resource.data.roster[request.resource.data.dmUid] == true) ||
+     (resource.data.dmUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt']))
+   );
+   allow delete: if false;
+   match /characters/{uid} {
+    allow read: if inCampaign(cid);
+    allow create, update: if inCampaign(cid) && (request.auth.uid == uid || campaignDm(cid)) && c(cid).data.roster[uid] == true && uid != c(cid).data.dmUid && request.resource.data.keys().hasOnly(['name','ancestry','className','level','xp','ac','speed','hp','maxHp','tempHp','gold','silver','copper','abilities','inventory','notes','resources','updatedAt','ownerEmail']) && request.resource.data.ownerEmail == get(/databases/$(database)/documents/members/$(uid)).data.email;
+    allow delete: if false;
+   }
+   match /secrets/{id} {
+    allow read: if campaignDm(cid) || campaignOwner(cid);
+    allow create, update: if (campaignDm(cid) || campaignOwner(cid)) && id == 'main' && request.resource.data.keys().hasOnly(['notes','updatedAt']);
+    allow delete: if false;
+   }
+   match /snapshots/{id} {
+    allow read: if campaignOwner(cid);
+    allow create: if campaignOwner(cid) && request.resource.data.createdBy == request.auth.uid && request.resource.data.keys().hasOnly(['createdAt','createdBy','name','session','dmUid','dmNotes','characters']);
+    allow update, delete: if false;
+   }
   }
  }
 }

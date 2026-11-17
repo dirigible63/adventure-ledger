@@ -1,58 +1,33 @@
-# Adventure Ledger — family D&D character tracker
+# Adventure Ledger 2.0 — Campaigns
 
-A mobile-friendly, static website using Firebase Authentication and Cloud Firestore. Suitable for GitHub Pages. No paid hosting required for modest family use, subject to Firebase's current free-tier quotas.
+GitHub Pages + Firebase Authentication + Firestore. No build step required.
 
-## Setup (about 15–25 minutes)
+## IMPORTANT: Upgrade order
 
-1. Create a Firebase project at https://console.firebase.google.com/ .
-2. In **Build > Authentication > Sign-in method**, enable **Email/Password**.
-3. In **Build > Firestore Database**, create a database in production mode, selecting a nearby region. Do **not** use open test rules.
-4. Open **Firestore Database > Rules**. Replace the rules with the contents of `firestore.rules` and publish them.
-5. In **Project settings > General > Your apps**, register a **Web** app. Copy its `firebaseConfig` object into `firebase-config.js`, replacing `null`, for example:
+1. **Keep a backup:** Download the current GitHub repository ZIP. In Firebase Console > Firestore > Data, do not delete any existing collections. Your existing `/members`, `/characters`, `/bootstrap`, and `/invites` data is preserved by this upgrade.
+2. **Publish the new `firestore.rules` FIRST** in Firebase Console > Firestore Database > Rules. Replace the existing text, then Publish. These rules continue to permit existing authentication and onboarding, but the old version of the app will no longer be able to modify legacy `/characters` while the update is in progress. Schedule the change when nobody is playing.
+3. Upload **all six files** from this ZIP to the root of the GitHub repository (`index.html`, `app.js`, `styles.css`, `firebase-config.js`, `firestore.rules`, `README.md`). Commit changes, wait for GitHub Pages to deploy, and hard refresh.
+4. Sign in using your existing account. Create a campaign (e.g., Heroes of the Borderlands). You will initially be both owner and DM. The old global DM role remains only for initial account registration compatibility.
+5. In Manage campaign, invite new players by email, have them register and verify their addresses, then **Add player** from the registered-user list. Existing accounts can be added directly.
+6. Assign the DM from the campaign's member list. Only the owner can reassign the DM. Each campaign has one DM at a time.
 
-```js
-window.ADVENTURE_FIREBASE_CONFIG = {
-  apiKey: "...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project",
-  storageBucket: "your-project.firebasestorage.app",
-  messagingSenderId: "...",
-  appId: "..."
-};
-```
+## What is saved
 
-Firebase web configuration values are intended to be public. Do not paste private service-account keys.
+`campaigns/{campaignId}` contains campaign name, owner ID, DM ID, roster, status, and session name. Each campaign has its own `characters/{userId}`, private `secrets/main` (DM notes), and owner-only `snapshots/{snapshotId}`. A snapshot can restore character sheets, but intentionally does **not** automatically restore roles, roster, or DM notes.
 
-6. In **Authentication > Settings > Authorized domains**, add your GitHub Pages hostname (e.g. `username.github.io`) if not already present.
-7. Create a new GitHub repository (e.g. `adventure-ledger`). Upload all files in this folder to the repository root. In **Settings > Pages**, deploy from the `main` branch and `/ (root)` folder.
-8. Visit `https://YOUR_USERNAME.github.io/adventure-ledger/`. Create **your DM account first** and verify the email. Sign out and sign in again. The first verified account to claim the database's bootstrap document becomes DM.
-9. On the DM dashboard, invite each family member by their exact email address. They register with that email, verify it, and sign in. Each can then create their character.
+## Existing data / migration
 
-## Security and privacy
+Existing `/characters/{userId}` records are NOT deleted and are NOT automatically copied into campaigns. To migrate a player character, create a campaign, add the player, and enter their existing values into their new campaign character sheet. The previous global DM test character remains in the legacy collection but is not displayed in new campaigns. The new app does not modify it. This is intentionally conservative to prevent accidental data loss.
 
-- This is for a private family game, not sensitive personal records. Use unique passwords and do not store real-world sensitive information in character notes.
-- Email verification is required before account membership. Firestore rules restrict player writes to their own character and allow the DM to edit everyone.
-- **All registered campaign members can see other players' character sheets, including notes and inventory.** Don't enter secret DM-only information there.
-- Firebase Authentication accounts and Firestore data persist separately from GitHub Pages. Back up important character data occasionally in Firebase Console.
-- The first account is automatically DM. Do not publish the site until you're ready to register your own account. If someone else claims DM first, reset the Firebase project/database before use or use Firebase Console to repair the roles safely.
-- Invitations grant access to anyone who can verify the invited email address. Use addresses controlled by your family.
-- Account removal and campaign export are not implemented in v1; use Firebase Console for administration.
+## Important limitations
 
-## Features
+- Only registered users can be added to a campaign. Email invitation enables account registration but does not automatically add a player to the campaign.
+- Campaign owner cannot be transferred in this version; DM can be reassigned.
+- One character per player per campaign.
+- Snapshots are owner-only and restore character sheets, not campaign settings. For a full off-platform backup, export Firestore separately.
+- The campaign document is readable by all members; private DM notes are stored separately in `secrets/main` and accessible only to DM/owner.
+- Firestore rules need live Firebase testing before inviting family members. JavaScript syntax checks are not an end-to-end integration test.
 
-- Individual email/password accounts and email verification
-- DM invitation allowlist and party-wide editing
-- Current/max/temporary HP, quick damage and healing
-- Gold/silver/copper, quick gold adjustments
-- Level, XP, AC, speed, six ability scores
-- Inventory, resources/spells, character notes
-- Party overview and recent quick-adjustment activity
-- Live synchronization across devices
+## Security
 
-## Limitations
-
-- No automated D&D character creation, rules enforcement, spell tracking, or dice roller yet.
-- Coin and health quick buttons save immediately. Other fields require **Save character**.
-- One character per account in v1. DM can edit all existing characters.
-- Firebase's free tier has quotas; check Firebase's current pricing and usage dashboard.
-- The site requires an internet connection.
+Firebase web config contains public client identifiers, not a server secret. Firestore rules, not obscurity, enforce permissions. Keep authentication and email verification enabled. Do not use Firestore test mode.
