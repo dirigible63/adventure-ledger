@@ -1,28 +1,30 @@
-# Adventure Ledger 2.1 — Inventory & Treasure
+# Adventure Ledger 2.2 — Usability update
 
-An update to Adventure Ledger 2.0. No build tools required.
+Responsive interface update based on the existing v2.1 app and Firestore data model.
 
-## Install
+## What's changed
+- DM dashboard shows one card per player, with HP, AC, item count, and direct **Inventory**, **Award**, and **Character** actions.
+- Inventory tab has visible player/party selectors for DMs; awards launched from a player card preselect that recipient.
+- Players see **My inventory** first, with shared party supplies collapsible underneath.
+- Character view starts with HP, AC, gold, and an inventory shortcut; full editing form is expandable.
+- Common touch targets enlarged; phone navigation scrolls horizontally and stays visible.
+- Custom item creation is collapsible to reduce screen clutter.
+- Asset cache-busting query strings (`?v=2.2`) help avoid stale JavaScript after deployment.
 
-1. Back up the current GitHub repository (Code → Download ZIP) and preserve your existing Firestore data.
-2. Firebase Console → Firestore Database → Rules: paste the full contents of `firestore.rules` and click **Publish**. This adds the inventory permissions while retaining the campaign permissions.
-3. Upload the six files in this ZIP to the **root** of your existing `adventure-ledger` GitHub repository, replacing matching filenames. Commit directly to `main`.
-4. GitHub Actions → wait for a successful Pages deployment. Open the site and hard-refresh with Ctrl+Shift+R.
-5. Sign in as DM, open a campaign, and choose the new **Inventory** tab. Add an item to the party or a player. Sign in as a player to verify visibility and restrictions.
+## Installation
+1. Back up your current repository (Code > Download ZIP).
+2. Upload **index.html**, **app.js**, and **styles.css** to the root of your GitHub repository, replacing the existing versions. Keep **firebase-config.js** unchanged if you've customized it.
+3. Commit to `main`, wait for GitHub Pages deployment, and refresh the site.
 
-## Features
+**No Firestore rules or database migration required.** The included `firestore.rules` is a copy of the existing v2.1 rules for reference, not an instruction to republish them.
 
-- Searchable built-in **starter** equipment list (13 familiar entries), plus a per-campaign catalogue of DM-created items. The built-in list is intentionally a curated starter, **not** the complete SRD 5.2 catalogue.
-- DM creates items on the fly, awards to a player or party, optionally saves to campaign catalogue.
-- Players can add mundane gear to their own inventory; only DM can award magic/quest items.
-- Item quantities, removal, party inventory and live synchronization.
-- Unidentified items can have a public-facing name and description. Secret true names and notes live in a separate DM-only Firestore collection. Unidentified items are not automatically saved into the shared catalogue, preventing a secret-name leak.
-- The previous free-text character inventory remains as **Legacy inventory notes** so nothing is lost.
+## Test
+1. Sign in as DM and open a campaign; choose Inventory on a character card, then Award on that same card.
+2. Award a starter item; check the recipient's inventory and verify the item appears for that player.
+3. Test on a phone-sized screen and on a tablet/laptop.
 
-## Current limitations / next steps
-
-- This is a starter catalogue, not a licensed reproduction of the full Player's Handbook or Dungeon Master's Guide. For a complete SRD-based catalogue, import an appropriately attributed/licensed dataset in a later version.
-- No player-to-player transfer control, automatic potion dice/healing, equipment stat modifiers, or automatic inventory snapshots yet.
-- The DM can reveal an unidentified item's true name when a secret record exists. Public inventory fields should never contain secrets.
-- Security rules and cross-account flows require live testing in your Firebase project. `node --check` validates JavaScript syntax, not integration.
-- Existing campaign and character records are preserved. This update creates new `inventory`, `itemCatalog`, and `itemSecrets` subcollections under each campaign.
+## Known limitations
+- This is a responsive UI redesign, not a new equipment or rules engine.
+- Character form is still reconstructed on Firestore snapshot updates, so save detailed edits before switching tabs.
+- The app still requires internet access; offline/PWA support is not included.
+- This package has been statically checked, but has not been tested against your live Firebase project.
