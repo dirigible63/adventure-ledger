@@ -40,7 +40,7 @@ service cloud.firestore {
    allow delete: if false;
    match /characters/{uid} {
     allow read: if inCampaign(cid);
-    allow create, update: if inCampaign(cid) && (request.auth.uid == uid || campaignDm(cid)) && c(cid).data.roster[uid] == true && uid != c(cid).data.dmUid && request.resource.data.keys().hasOnly(['name','ancestry','className','level','xp','ac','speed','hp','maxHp','tempHp','gold','silver','copper','abilities','inventory','notes','resources','updatedAt','ownerEmail']) && request.resource.data.ownerEmail == get(/databases/$(database)/documents/members/$(uid)).data.email;
+    allow create, update: if inCampaign(cid) && (request.auth.uid == uid || campaignDm(cid)) && c(cid).data.roster[uid] == true && uid != c(cid).data.dmUid && request.resource.data.keys().hasOnly(['name','ancestry','className','background','alignment','skillProficiencies','level','xp','ac','speed','hp','maxHp','tempHp','gold','silver','copper','abilities','inventory','notes','resources','updatedAt','ownerEmail']) && request.resource.data.ownerEmail == get(/databases/$(database)/documents/members/$(uid)).data.email;
     allow delete: if false;
    }
    // Campaign inventory. Secret properties are in itemSecrets, never public inventory docs.
@@ -52,15 +52,18 @@ service cloud.firestore {
       && request.resource.data.category is string && request.resource.data.catalogId is string
       && request.resource.data.quantity is int && request.resource.data.quantity >= 0 && request.resource.data.quantity <= 99999
       && request.resource.data.identified is bool && request.resource.data.restricted is bool
-      && (request.resource.data.ownerUid == 'party' || c(cid).data.roster[request.resource.data.ownerUid] == true);
+      && (request.resource.data.ownerUid == 'party' || request.resource.data.ownerUid == 'dropped' || c(cid).data.roster[request.resource.data.ownerUid] == true);
    }
    match /inventory/{id} {
     allow read: if inCampaign(cid);
     allow create: if inCampaign(cid) && validItem() && request.resource.data.createdBy == request.auth.uid
       && (campaignDm(cid) || (request.resource.data.ownerUid == request.auth.uid && request.resource.data.restricted == false && request.resource.data.identified == true && request.resource.data.category in ['Gear','Weapon','Armor','Tools','Consumable','Ammunition','Other']));
     allow update: if inCampaign(cid) && validItem() && request.resource.data.createdBy == resource.data.createdBy
-      && (campaignDm(cid) || (resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity','updatedAt'])));
+      && (campaignDm(cid) || (resource.data.ownerUid == request.auth.uid && (request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity','updatedAt']) || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerUid','updatedAt']))));
     allow delete: if inCampaign(cid) && (campaignDm(cid) || resource.data.ownerUid == request.auth.uid);
+   }
+   match /encounters/{id} {
+    allow read, write: if campaignDm(cid);
    }
    match /itemCatalog/{id} {
     allow read: if inCampaign(cid);
